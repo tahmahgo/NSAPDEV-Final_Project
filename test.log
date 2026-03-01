@@ -1,0 +1,5 @@
+Feb 22 10:00:01 HOST-A sshd[123]: INFO: User root logged in
+Feb 22 10:05:00 HOST-B systemd: WARN: Low disk space
+Feb 23 11:00:00 HOST-A kernel: ERROR: hardware failure
+Feb 23 12:00:00 HOST-C sshd[456]: INFO: Connection closed
+Feb 23 13:00:00 HOST-A sshd[789]: ERROR: Failed password
