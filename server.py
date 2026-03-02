@@ -1,11 +1,12 @@
 import socket
 import threading
 import re
+import time
 
 class Indexer:
     def __init__(self):
         self.data_store = []
-        # Requirement: Mutex lock to prevent data corruption during concurrent access
+        # Requirement: Mutex lock to prevent data corruption during concurrent access (CLO3)
         self.lock = threading.Lock() 
         # RFC 3164 Syslog Regex (Timestamp, Host, Daemon, PID, Message)
         self.syslog_re = re.compile(r'^(\w{3}\s+\d+\s\d+:\d+:\d+)\s+(\S+)\s+([^:\[\s]+)(?:\[(\d+)\])?:\s+(.*)$')
@@ -14,6 +15,7 @@ class Indexer:
         entries = []
         lines = raw_content.strip().splitlines()
         for line in lines:
+            
             match = self.syslog_re.match(line)
             if match:
                 entries.append({
@@ -23,6 +25,8 @@ class Indexer:
                     "daemon": match.group(3),
                     "msg": match.group(5)
                 })
+        
+        # Critical Section: Protect shared memory with Mutex
         with self.lock:
             self.data_store.extend(entries)
             return len(entries)
@@ -51,29 +55,31 @@ class Indexer:
 idx = Indexer()
 
 def handle_client(conn, addr):
-    # Get unique ID for this thread to show concurrency in the console
     thread_id = threading.get_ident()
     try:
         print(f"\n[NEW CONNECTION] Thread {thread_id} started for {addr}")
         
-        
+        # Increase buffer slightly to ensure large logs are captured
         data = conn.recv(1024*1024).decode('utf-8')
         if not data: return
         
-        # Input Validation: Ensuring the protocol format is respected
+        # Deserialization and Command Identification
         if "|" not in data and data != "PURGE":
             conn.send(b"ERROR: Invalid protocol format.")
             return
 
-        parts = data.split("|")
+        parts = data.split("|", 1) # Split only at first pipe to protect log content
         cmd = parts[0]
 
         if cmd == "INGEST" and len(parts) >= 2:
             count = idx.parse_and_index(parts[1])
             conn.send(f"SUCCESS: {count} syslog entries indexed.".encode())
-        elif cmd == "QUERY" and len(parts) >= 3:
-            response = idx.query(parts[1], parts[2])
-            conn.send(response.encode())
+        elif cmd == "QUERY":
+            # For queries, we might need a second split if multiple params exist
+            query_parts = parts[1].split("|")
+            if len(query_parts) >= 2:
+                response = idx.query(query_parts[0], query_parts[1])
+                conn.send(response.encode())
         elif cmd == "PURGE":
             conn.send(idx.purge().encode())
             
@@ -81,12 +87,20 @@ def handle_client(conn, addr):
 
     except Exception as e:
         print(f"[ERROR] Thread {thread_id} encountered: {e}")
-        conn.send(f"SERVER ERROR: {str(e)}".encode())
+        try:
+            conn.send(f"SERVER ERROR: {str(e)}".encode())
+        except:
+            pass
     finally:
+        
+        try:
+            conn.shutdown(socket.SHUT_WR) 
+            time.sleep(0.1) 
+        except:
+            pass
         conn.close()
 
 def run_server():
-    # TCP Socket Setup
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
@@ -94,10 +108,9 @@ def run_server():
         s.listen(10)
         print("SUCCESS: Indexer is UP and listening on 0.0.0.0:65432")
     
-        
         while True:
             c, a = s.accept()
-            # Requirement: Spawn a NEW thread for every client connection
+            # Requirement: Spawn a NEW thread for every client connection (CLO  2)
             client_thread = threading.Thread(target=handle_client, args=(c, a))
             client_thread.daemon = True
             client_thread.start()
