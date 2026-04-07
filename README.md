@@ -1,5 +1,5 @@
 NSAPDEV Mini Splunk 
-Final Project Report
+
 
 Course:
 NSAPDEV (Server Application Development)
