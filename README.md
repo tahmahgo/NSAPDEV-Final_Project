@@ -3,10 +3,13 @@ NSAPDEV Mini Splunk
 
 Course:
 NSAPDEV (Server Application Development)
+
 Term/AY:
 2nd Term AY 2025-2026
+
 Project Title:
 Concurrent Syslog Analytics Server ("Mini-Splunk")
+
 Team Members:
 Elmeranita Estrella, Isha Zulueta
 
