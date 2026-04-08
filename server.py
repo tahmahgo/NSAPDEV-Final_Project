@@ -104,7 +104,7 @@ def run_server():
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(('0.0.0.0', 65432))
     s.listen(10)
-    print("SUCCESS: Indexer is UP and listening on 0.0.0.0:65432")
+    print("SUCCESS: Indexer is UP and listening on 0.0.0.0:8080")
     while True:
         c, a = s.accept()
         threading.Thread(target=handle_client, args=(c, a), daemon=True).start()
