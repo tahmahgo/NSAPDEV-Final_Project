@@ -43,7 +43,7 @@ def send_payload(target, payload):
             return response
             
     except ConnectionResetError:
-        return "Network Error: [WinError 10054] Connection Reset. This usually means the Proxmox Host rejected the data packet or the Redirection rule is misconfigured."
+        return "Network Error: [WinError 10054] Connection Reset. Proxmox Host rejected the data packet or the Redirection rule is misconfigured."
     except Exception as e:
         return f"Network Error: {e}"
 
